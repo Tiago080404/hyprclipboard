@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
-var historyFile = "/home/tiago/Projects/goprojects/cliphistory/cliphist.json"
+var historyFile string
 
 func main() {
+	historyFile = getHistoryFilePath()
 	args := os.Args[1:]
 	if len(args) > 0 && args[0] == "list" {
 		showList()
@@ -47,18 +49,21 @@ func readFile(content string) {
 	}
 	if len(history) > 20 {
 		history = history[:20]
-		fmt.Println("historz", history)
-	}
-	fmt.Println(len(history))
-	for i := range history {
-		history[i] = strings.TrimSpace(history[i])
 	}
 
-	if strings.TrimSpace(history[0]) == strings.TrimSpace(content) {
-		fmt.Println("equals")
-		return
+	if len(content) > 15 {
+		fmt.Println("content too long")
+		content = content[:15] + "..."
+		fmt.Println("shorter", content)
 	}
 
+	if len(history) != 0 {
+
+		if strings.TrimSpace(history[0]) == strings.TrimSpace(content) {
+			fmt.Println("equals")
+			return
+		}
+	}
 	history = append([]string{content}, history...)
 
 	newC, err := json.Marshal(history)
@@ -105,10 +110,24 @@ func showList() {
 	userInputSelect := out.String()
 	cmdCopy := exec.Command("wl-copy")
 	cmdCopy.Stdin = strings.NewReader(userInputSelect)
-	fmt.Println("Ausgewählter Clip:", userInputSelect)
 	cmdCopy.Run()
 
 }
+
+func getHistoryFilePath() string {
+	configDir := filepath.Join(os.Getenv("HOME"), ".config")
+	filePath := filepath.Join(configDir, "cliphist", "cliphist.json")
+	err := os.MkdirAll(filepath.Dir(filePath), 0750)
+	if err != nil {
+		panic(err)
+	}
+
+	history := []string{}
+	data, _ := json.Marshal(history)
+	os.WriteFile(filePath, data, 0644)
+	return filePath
+}
+
 func deleteHistory() {
 	history := reader()
 	history = history[:1]
