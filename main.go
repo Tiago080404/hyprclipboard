@@ -90,10 +90,6 @@ func showList() {
 		return
 	}
 
-	if len(history) == 0 {
-		return
-	}
-
 	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive")
 	cmd.Stdin = strings.NewReader(strings.Join(history, "\n"))
 
