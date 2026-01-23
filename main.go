@@ -64,8 +64,9 @@ func readFile(content string) {
 			return
 		}
 	}
+	fmt.Println("History before", history)
 	history = append([]string{content}, history...)
-
+	fmt.Println("new hgist", history)
 	newC, err := json.Marshal(history)
 
 	if err != nil {
@@ -121,11 +122,19 @@ func getHistoryFilePath() string {
 	if err != nil {
 		panic(err)
 	}
-
+	if fileExists(filePath) {
+		return filePath
+	}
 	history := []string{}
 	data, _ := json.Marshal(history)
 	os.WriteFile(filePath, data, 0644)
 	return filePath
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+
+	return err == nil
 }
 
 func deleteHistory() {
