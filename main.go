@@ -52,21 +52,16 @@ func readFile(content string) {
 	}
 
 	if len(content) > 15 {
-		fmt.Println("content too long")
 		content = content[:15] + "..."
-		fmt.Println("shorter", content)
 	}
 
 	if len(history) != 0 {
 
 		if strings.TrimSpace(history[0]) == strings.TrimSpace(content) {
-			fmt.Println("equals")
 			return
 		}
 	}
-	fmt.Println("History before", history)
 	history = append([]string{content}, history...)
-	fmt.Println("new hgist", history)
 	newC, err := json.Marshal(history)
 
 	if err != nil {
@@ -92,7 +87,6 @@ func reader() []string {
 func showList() {
 	history := reader()
 	if len(history) == 0 {
-		fmt.Println("History leer")
 		return
 	}
 
