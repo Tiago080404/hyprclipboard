@@ -12,6 +12,11 @@ import (
 
 var historyFile string
 
+type ClipItem struct {
+	FullText string `json:"full_text"`
+	Display  string `json:"display"`
+}
+
 func main() {
 	historyFile = getHistoryFilePath()
 	args := os.Args[1:]
@@ -43,25 +48,28 @@ func readFile(content string) {
 	if err != nil {
 		panic(err)
 	}
-	var history []string
+	var history []ClipItem
 	if err := json.Unmarshal(file, &history); err != nil {
 		panic(err)
 	}
+
 	if len(history) > 20 {
 		history = history[:20]
 	}
 
+	display := content
 	if len(content) > 15 {
-		content = content[:15] + "..."
+		display = display[:15] + "..."
 	}
 
-	if len(history) != 0 {
+	/* if len(history) != 0 {
 
 		if strings.TrimSpace(history[0]) == strings.TrimSpace(content) {
 			return
 		}
-	}
-	history = append([]string{content}, history...)
+	} */
+	newItem := ClipItem{FullText: content, Display: display}
+	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
 
 	if err != nil {
@@ -69,19 +77,21 @@ func readFile(content string) {
 	}
 	os.WriteFile(historyFile, newC, 0644)
 }
-func reader() []string {
-	var history []string
+func reader() []ClipItem {
+	var history []ClipItem
 	file, err := os.ReadFile(historyFile)
 
 	if err != nil {
-		panic(err)
+		return []ClipItem{}
 	}
+	if len(file) == 0 {
+		return []ClipItem{}
+	}
+
 	if err := json.Unmarshal(file, &history); err != nil {
 		panic(err)
 	}
-	for i := range history {
-		history[i] = strings.TrimSpace(history[i])
-	}
+
 	return history
 }
 func showList() {
@@ -89,9 +99,13 @@ func showList() {
 	if len(history) == 0 {
 		return
 	}
+	var displayList []string
+	for _, item := range history {
+		displayList = append(displayList, item.Display)
+	}
 
 	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive")
-	cmd.Stdin = strings.NewReader(strings.Join(history, "\n"))
+	cmd.Stdin = strings.NewReader(strings.Join(displayList, "\n"))
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -103,9 +117,16 @@ func showList() {
 	}
 
 	userInputSelect := out.String()
-	cmdCopy := exec.Command("wl-copy")
-	cmdCopy.Stdin = strings.NewReader(userInputSelect)
-	cmdCopy.Run()
+
+	for _, item := range history {
+		if item.Display == userInputSelect {
+
+			cmdCopy := exec.Command("wl-copy")
+			cmdCopy.Stdin = strings.NewReader(item.FullText)
+			cmdCopy.Run()
+			break
+		}
+	}
 
 }
 
@@ -119,7 +140,7 @@ func getHistoryFilePath() string {
 	if fileExists(filePath) {
 		return filePath
 	}
-	history := []string{}
+	history := []ClipItem{{FullText: "Test", Display: "what"}}
 	data, _ := json.Marshal(history)
 	os.WriteFile(filePath, data, 0644)
 	return filePath
