@@ -118,7 +118,7 @@ func showList() {
 
 	}
 
-	userInputSelect := out.String()
+	userInputSelect := strings.TrimSpace(out.String())
 
 	for _, item := range history {
 		if item.Display == userInputSelect {
