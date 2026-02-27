@@ -52,6 +52,14 @@ func readFile(content string) {
 	if err := json.Unmarshal(file, &history); err != nil {
 		panic(err)
 	}
+	if len(history) != 0 {
+		for index, item := range history {
+			if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
+				history = append(history[:index], history[index+1:]...)
+				break
+			}
+		}
+	}
 
 	if len(history) > 20 {
 		history = history[:20]
@@ -62,12 +70,6 @@ func readFile(content string) {
 		display = display[:15] + "..."
 	}
 
-	/* if len(history) != 0 {
-
-		if strings.TrimSpace(history[0]) == strings.TrimSpace(content) {
-			return
-		}
-	} */
 	newItem := ClipItem{FullText: content, Display: display}
 	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
