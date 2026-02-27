@@ -35,10 +35,10 @@ HyprClip is a clipboard manager for Wayland, written in Go. It tracks your clipb
 ```bash
     #Go to your waybar config and paste this in there with your prefered specs(you can copy my specs)
 "custom/clipboard":{
-"exec": "/home/tiago/.local/bin/clip-hist",
+"exec": "{PATH}/clip-hist", #the path where your binary is located for me its in local/bin
 "interval":5,
 "format":" ",
-"on-click":"/home/tiago/.local/bin/clip-hist list"
+"on-click":"{PATH}/clip-hist list" #also the path
 }
 #After that restart your Waybar
 ```
