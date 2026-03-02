@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,6 +16,8 @@ var historyFile string
 type ClipItem struct {
 	FullText string `json:"full_text"`
 	Display  string `json:"display"`
+	ImageB64 string `json:"image_b64"`
+	MimeType string `json:"mime_type"`
 }
 
 func main() {
@@ -28,7 +31,7 @@ func main() {
 		deleteHistory()
 		return
 	}
-	cmd := exec.Command("wl-paste")
+	cmd := exec.Command("wl-paste", "--list-types")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -36,9 +39,61 @@ func main() {
 		fmt.Println("Fehler")
 		return
 	}
-	clipBoardContent := out.String()
-	fmt.Println(clipBoardContent)
-	readFile(clipBoardContent)
+	clipBoardContent := strings.TrimSpace(out.String())
+	fmt.Println("content mime", clipBoardContent)
+	if strings.Contains(clipBoardContent, "image/png") {
+		fmt.Println("containssss")
+		readImageFile("image/png")
+	} else {
+		fmt.Println("normal text")
+		cmd := exec.Command("wl-paste")
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err := cmd.Run()
+		if err != nil {
+			fmt.Println("Could not read content of type text")
+			return
+		}
+		content := strings.TrimSpace(out.String())
+		readFile(content)
+	}
+}
+
+func readImageFile(mime string) {
+	cmd := exec.Command("wl-paste", "-t", mime)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		fmt.Print("Couldnt read imae")
+		return
+	}
+	imageData := out.Bytes()
+	data := base64.StdEncoding.EncodeToString(imageData)
+	display := "[BILD]" + mime
+
+	file, err := os.ReadFile(historyFile)
+
+	if err != nil {
+		panic(err)
+	}
+	var history []ClipItem
+	if err := json.Unmarshal(file, &history); err != nil {
+		panic(err)
+	}
+
+	if len(history) > 20 {
+		history = history[:20]
+	}
+
+	newItem := ClipItem{Display: display, ImageB64: data, MimeType: mime}
+	history = append([]ClipItem{newItem}, history...)
+	newC, err := json.Marshal(history)
+
+	if err != nil {
+		panic(err)
+	}
+	os.WriteFile(historyFile, newC, 0644)
 }
 
 func readFile(content string) {
@@ -70,7 +125,7 @@ func readFile(content string) {
 		display = display[:15] + "..."
 	}
 
-	newItem := ClipItem{FullText: content, Display: display}
+	newItem := ClipItem{FullText: content, Display: display, MimeType: "text/plain"}
 	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
 
@@ -123,10 +178,20 @@ func showList() {
 	for _, item := range history {
 		if item.Display == userInputSelect {
 
-			cmdCopy := exec.Command("wl-copy")
-			cmdCopy.Stdin = strings.NewReader(item.FullText)
-			cmdCopy.Run()
-			break
+			if item.MimeType == "text/plain" {
+
+				cmdCopy := exec.Command("wl-copy")
+				cmdCopy.Stdin = strings.NewReader(item.FullText)
+				cmdCopy.Run()
+				break
+			} else {
+
+				data, _ := base64.StdEncoding.DecodeString(item.ImageB64)
+				cmdCopy := exec.Command("wl-copy", "-t", item.MimeType)
+				cmdCopy.Stdin = bytes.NewReader(data)
+				cmdCopy.Run()
+				break
+			}
 		}
 	}
 
