@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,15 +15,30 @@ import (
 
 var historyFile string
 
+const tmpDir = "/tmp/cliphist-img-wofi"
+
 type ClipItem struct {
 	FullText string `json:"full_text"`
 	Display  string `json:"display"`
 	ImageB64 string `json:"image_b64"`
 	MimeType string `json:"mime_type"`
+	ImgPath  string `json:"img_path"`
 }
 
 func main() {
 	historyFile = getHistoryFilePath()
+
+	if _, err := os.Stat(tmpDir); !os.IsNotExist(err) {
+		fmt.Println("dir exits")
+	} else {
+		err := os.Mkdir(tmpDir, 0750)
+
+		if err != nil {
+			fmt.Println("Could not create dir")
+			return
+		}
+	}
+
 	args := os.Args[1:]
 	if len(args) > 0 && args[0] == "list" {
 		showList()
@@ -42,7 +59,6 @@ func main() {
 	clipBoardContent := strings.TrimSpace(out.String())
 	fmt.Println("content mime", clipBoardContent)
 	if strings.Contains(clipBoardContent, "image/png") {
-		fmt.Println("containssss")
 		readImageFile("image/png")
 	} else {
 		fmt.Println("normal text")
@@ -70,8 +86,9 @@ func readImageFile(mime string) {
 	}
 	imageData := out.Bytes()
 	data := base64.StdEncoding.EncodeToString(imageData)
-	display := "[BILD]" + mime
 
+	imgPath := addImageForWofiDisplay(imageData)
+	display := strings.Join([]string{"img:", imgPath}, "")
 	file, err := os.ReadFile(historyFile)
 
 	if err != nil {
@@ -86,7 +103,7 @@ func readImageFile(mime string) {
 		history = history[:20]
 	}
 
-	newItem := ClipItem{Display: display, ImageB64: data, MimeType: mime}
+	newItem := ClipItem{Display: display, ImageB64: data, MimeType: mime, ImgPath: imgPath}
 	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
 
@@ -161,7 +178,7 @@ func showList() {
 		displayList = append(displayList, item.Display)
 	}
 
-	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive")
+	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive", "--allow-images")
 	cmd.Stdin = strings.NewReader(strings.Join(displayList, "\n"))
 
 	var out bytes.Buffer
@@ -176,6 +193,7 @@ func showList() {
 	userInputSelect := strings.TrimSpace(out.String())
 
 	for _, item := range history {
+
 		if item.Display == userInputSelect {
 
 			if item.MimeType == "text/plain" {
@@ -185,7 +203,6 @@ func showList() {
 				cmdCopy.Run()
 				break
 			} else {
-
 				data, _ := base64.StdEncoding.DecodeString(item.ImageB64)
 				cmdCopy := exec.Command("wl-copy", "-t", item.MimeType)
 				cmdCopy.Stdin = bytes.NewReader(data)
@@ -217,6 +234,15 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 
 	return err == nil
+}
+
+func addImageForWofiDisplay(data []byte) string {
+	hashedValue := sha256.Sum256(data)
+	name := hex.EncodeToString(hashedValue[:]) + ".png"
+	fileNamePath := filepath.Join(tmpDir, name)
+
+	os.WriteFile(fileNamePath, data, 0644)
+	return fileNamePath
 }
 
 func deleteHistory() {
