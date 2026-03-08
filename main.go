@@ -53,11 +53,11 @@ func main() {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Fehler")
+		fmt.Println("Could not run cmd")
 		return
 	}
 	clipBoardContent := strings.TrimSpace(out.String())
-	fmt.Println("content mime", clipBoardContent)
+
 	if strings.Contains(clipBoardContent, "image/png") {
 		readImageFile("image/png")
 	} else {
