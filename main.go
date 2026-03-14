@@ -246,12 +246,11 @@ func addImageForWofiDisplay(data []byte) string {
 }
 
 func deleteHistory() {
-	history := reader()
-	history = history[:1]
+	history := []ClipItem{}
 
-	newC, err := json.Marshal(history)
+	data, err := json.Marshal(history)
 	if err != nil {
 		panic(err)
 	}
-	os.WriteFile(historyFile, newC, 0644)
+	os.WriteFile(historyFile, data, 0644)
 }
