@@ -103,6 +103,14 @@ func readImageFile(mime string) {
 		history = history[:20]
 	}
 
+	if len(history) != 0 {
+		for index, item := range history {
+			if strings.TrimSpace(item.ImageB64) == strings.TrimSpace(data) {
+				history = append(history[:index], history[index+1:]...)
+				break
+			}
+		}
+	}
 	newItem := ClipItem{Display: display, ImageB64: data, MimeType: mime, ImgPath: imgPath}
 	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
