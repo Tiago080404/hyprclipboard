@@ -57,9 +57,10 @@ func main() {
 		return
 	}
 	clipBoardContent := strings.TrimSpace(out.String())
-
 	if strings.Contains(clipBoardContent, "image/png") {
 		readImageFile("image/png")
+	} else if strings.Contains(clipBoardContent, "x-special/gnome-copied-files") {
+		readFile("text/uri-list")
 	} else {
 		fmt.Println("normal text")
 		cmd := exec.Command("wl-paste")
@@ -71,7 +72,7 @@ func main() {
 			return
 		}
 		content := strings.TrimSpace(out.String())
-		readFile(content)
+		readText(content)
 	}
 }
 
@@ -121,7 +122,7 @@ func readImageFile(mime string) {
 	os.WriteFile(historyFile, newC, 0644)
 }
 
-func readFile(content string) {
+func readText(content string) {
 	content = strings.TrimSpace(content)
 	file, err := os.ReadFile(historyFile)
 
@@ -150,7 +151,7 @@ func readFile(content string) {
 		display = display[:15] + "..."
 	}
 
-	newItem := ClipItem{FullText: content, Display: display, MimeType: "text/plain"}
+	newItem := ClipItem{FullText: content, Display: strings.TrimSpace(display), MimeType: "text/plain"}
 	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
 
@@ -210,6 +211,11 @@ func showList() {
 				cmdCopy.Stdin = strings.NewReader(item.FullText)
 				cmdCopy.Run()
 				break
+			} else if item.MimeType == "text/uri-list" {
+				cmdCopy := exec.Command("wl-copy", "-t", item.MimeType)
+				cmdCopy.Stdin = strings.NewReader(item.FullText)
+				cmdCopy.Run()
+				break
 			} else {
 				data, _ := base64.StdEncoding.DecodeString(item.ImageB64)
 				cmdCopy := exec.Command("wl-copy", "-t", item.MimeType)
@@ -261,4 +267,48 @@ func deleteHistory() {
 		panic(err)
 	}
 	os.WriteFile(historyFile, data, 0644)
+}
+
+func readFile(uriList string) {
+	cmd := exec.Command("wl-paste", "-t", uriList)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return
+	}
+	content := strings.TrimSpace(out.String())
+
+	file, err := os.ReadFile(historyFile)
+	if err != nil {
+		panic(err)
+	}
+	var history []ClipItem
+	if err := json.Unmarshal(file, &history); err != nil {
+		panic(err)
+	}
+
+	if len(history) != 0 {
+		for index, item := range history {
+			if strings.TrimSpace(item.FullText) == strings.TrimSpace(uriList) {
+				history = append(history[:index], history[index:]...)
+				break
+			}
+		}
+	}
+	if len(history) > 20 {
+		history = history[:20]
+	}
+
+	display := strings.Join([]string{"📄", content}, "")
+
+	newItem := ClipItem{FullText: content, Display: display, MimeType: uriList}
+	history = append([]ClipItem{newItem}, history...)
+	newC, err := json.Marshal(history)
+
+	if err != nil {
+		panic(err)
+	}
+
+	os.WriteFile(historyFile, newC, 0644)
 }
