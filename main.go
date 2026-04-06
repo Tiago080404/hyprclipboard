@@ -290,8 +290,8 @@ func readFile(uriList string) {
 
 	if len(history) != 0 {
 		for index, item := range history {
-			if strings.TrimSpace(item.FullText) == strings.TrimSpace(uriList) {
-				history = append(history[:index], history[index:]...)
+			if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
+				history = append(history[:index], history[index+1:]...)
 				break
 			}
 		}
