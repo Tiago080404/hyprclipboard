@@ -24,11 +24,6 @@ func TestReadText(t *testing.T) {
 }
 
 func TestHistoryLength(t *testing.T) {
-	tmpFile, _ := os.CreateTemp("", "history.json")
-	json.NewEncoder(tmpFile).Encode([]ClipItem{})
-
-	historyFile = tmpFile.Name()
-
 	var history []ClipItem
 	for i := range 21 {
 		history = append(history, ClipItem{
@@ -37,19 +32,11 @@ func TestHistoryLength(t *testing.T) {
 			MimeType: "text/plain",
 		})
 	}
-	data, _ := json.Marshal(history)
-	os.WriteFile(tmpFile.Name(), data, 0644)
+	history = checkHistoryLength(history)
 
-	readText("21ter Eintrag")
-
-	result, _ := os.ReadFile(tmpFile.Name())
-
-	var resultHistory []ClipItem
-	json.Unmarshal(result, &resultHistory)
-	if len(resultHistory) != 20 {
-		t.Errorf("erwartet 20 Einträge, bekommen %d", len(resultHistory))
+	if len(history) != 19 {
+		t.Fatalf("expected 19 but got %d", len(history))
 	}
-	defer os.Remove(tmpFile.Name())
 
 }
 func TestDeduplication(t *testing.T) {
