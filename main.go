@@ -100,18 +100,9 @@ func readImageFile(mime string) {
 		panic(err)
 	}
 
-	if len(history) > 20 {
-		history = history[:20]
-	}
+	history = checkHistoryLength(history)
+	history = deduplicateHistoryEntry(history, data, mime)
 
-	if len(history) != 0 {
-		for index, item := range history {
-			if strings.TrimSpace(item.ImageB64) == strings.TrimSpace(data) {
-				history = append(history[:index], history[index+1:]...)
-				break
-			}
-		}
-	}
 	newItem := ClipItem{Display: display, ImageB64: data, MimeType: mime, ImgPath: imgPath}
 	history = append([]ClipItem{newItem}, history...)
 	newC, err := json.Marshal(history)
@@ -133,18 +124,10 @@ func readText(content string) {
 	if err := json.Unmarshal(file, &history); err != nil {
 		panic(err)
 	}
-	if len(history) != 0 {
-		for index, item := range history {
-			if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
-				history = append(history[:index], history[index+1:]...)
-				break
-			}
-		}
-	}
 
-	if len(history) > 20 {
-		history = history[:20]
-	}
+	history = deduplicateHistoryEntry(history, content, "text/plain")
+
+	history = checkHistoryLength(history)
 
 	display := content
 	if len(content) > 15 {
@@ -288,17 +271,9 @@ func readFile(uriList string) {
 		panic(err)
 	}
 
-	if len(history) != 0 {
-		for index, item := range history {
-			if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
-				history = append(history[:index], history[index+1:]...)
-				break
-			}
-		}
-	}
-	if len(history) > 20 {
-		history = history[:20]
-	}
+	history = deduplicateHistoryEntry(history, content, uriList)
+
+	history = checkHistoryLength(history)
 
 	display := strings.Join([]string{"📄", content}, "")
 
@@ -311,4 +286,33 @@ func readFile(uriList string) {
 	}
 
 	os.WriteFile(historyFile, newC, 0644)
+}
+
+func checkHistoryLength(history []ClipItem) []ClipItem {
+	if len(history) >= 20 {
+		history = history[:19]
+	}
+	return history
+}
+
+func deduplicateHistoryEntry(history []ClipItem, content string, mime string) []ClipItem {
+
+	if len(history) != 0 {
+
+		for index, item := range history {
+			if mime == "image/png" {
+				if strings.TrimSpace(item.ImageB64) == strings.TrimSpace(content) {
+					history = append(history[:index], history[index+1:]...)
+					break
+				}
+			} else {
+				if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
+					history = append(history[:index], history[index+1:]...)
+					break
+				}
+			}
+		}
+	}
+
+	return history
 }
