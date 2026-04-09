@@ -1,4 +1,4 @@
-# HyprClip 📋
+# HyprClip
 
 HyprClip is a clipboard manager for Wayland, written in Go. It tracks your clipboard History in a JSON file and uses `wofi` to provide a searchable, graphical menu.
 
