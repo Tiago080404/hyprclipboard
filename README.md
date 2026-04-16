@@ -1,4 +1,4 @@
-# HyprClip 📋
+# HyprClip
 
 ![Alt-Text](projectImage.png)
 
