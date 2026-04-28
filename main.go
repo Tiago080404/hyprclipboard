@@ -59,10 +59,11 @@ func main() {
 	clipBoardContent := strings.TrimSpace(out.String())
 	if strings.Contains(clipBoardContent, "image/png") {
 		readImageFile("image/png")
-	} else if strings.Contains(clipBoardContent, "x-special/gnome-copied-files") {
+	} else if strings.Contains(clipBoardContent, "text/uri-list") {
+		fmt.Println("for read file", clipBoardContent)
 		readFile("text/uri-list")
 	} else {
-		fmt.Println("normal text")
+		fmt.Println("normal text", clipBoardContent)
 		cmd := exec.Command("wl-paste")
 		var out bytes.Buffer
 		cmd.Stdout = &out
@@ -100,8 +101,8 @@ func readImageFile(mime string) {
 		panic(err)
 	}
 
-	history = checkHistoryLength(history)
 	history = deduplicateHistoryEntry(history, data, mime)
+	history = checkHistoryLength(history)
 
 	newItem := ClipItem{Display: display, ImageB64: data, MimeType: mime, ImgPath: imgPath}
 	history = append([]ClipItem{newItem}, history...)
@@ -170,8 +171,8 @@ func showList() {
 		displayList = append(displayList, item.Display)
 	}
 
-	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive", "--allow-images")
-	cmd.Stdin = strings.NewReader(strings.Join(displayList, "\n"))
+	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive", "--allow-images", "--sort-order", "default", "--cache-file", "/dev/null")
+	cmd.Stdin = strings.NewReader(strings.Join(displayList, "\n")) //frommating besser machen
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -297,19 +298,16 @@ func checkHistoryLength(history []ClipItem) []ClipItem {
 
 func deduplicateHistoryEntry(history []ClipItem, content string, mime string) []ClipItem {
 
-	if len(history) != 0 {
-
-		for index, item := range history {
-			if mime == "image/png" {
-				if strings.TrimSpace(item.ImageB64) == strings.TrimSpace(content) {
-					history = append(history[:index], history[index+1:]...)
-					break
-				}
-			} else {
-				if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
-					history = append(history[:index], history[index+1:]...)
-					break
-				}
+	for index, item := range history {
+		if mime == "image/png" {
+			if strings.TrimSpace(item.ImageB64) == strings.TrimSpace(content) {
+				history = append(history[:index], history[index+1:]...)
+				break
+			}
+		} else {
+			if strings.TrimSpace(item.FullText) == strings.TrimSpace(content) {
+				history = append(history[:index], history[index+1:]...)
+				break
 			}
 		}
 	}
