@@ -168,11 +168,14 @@ func showList() {
 	}
 	var displayList []string
 	for _, item := range history {
+
+		item.Display = strings.ReplaceAll(item.Display, "\n", " ")
+
 		displayList = append(displayList, item.Display)
 	}
 
 	cmd := exec.Command("wofi", "--dmenu", "--prompt", "Clipboard:", "--insensitive", "--allow-images", "--sort-order", "default", "--cache-file", "/dev/null")
-	cmd.Stdin = strings.NewReader(strings.Join(displayList, "\n")) //frommating besser machen
+	cmd.Stdin = strings.NewReader(strings.Join(displayList, "\n"))
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
