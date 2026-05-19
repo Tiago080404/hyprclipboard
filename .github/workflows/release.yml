@@ -1,0 +1,23 @@
+name: Build on release
+
+on:
+  push:
+    tags: -"v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build and release
+        uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          goos: linux
+          goarch: amd64
+          binary_name: clip-hist
